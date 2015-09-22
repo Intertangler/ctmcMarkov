@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import random
 import csv
 import numpy as np
-import pygraphviz as pvg
+# import pygraphviz as pvg
 
 #G=pvg.AGraph(strict=False,directed=True)
 #nodelist=[
@@ -33,37 +33,24 @@ import pygraphviz as pvg
 #G.layout(prog='fdp')
 #G.draw('3_sites.png')
 
-
-
-
-
-
-
-
-
-rate_on = 2 # molecules per site per second
-rate_off = 1 # per second
-rate_mono_to_double = 2 # binding events per second
-rate_double_to_mono = 1 # unbinding events per second
-
 stateLabels = np.arange(14)
 def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     transitionRateMatrix = np.zeros((len(stateLabels),len(stateLabels)))
     # go from empty state to monovalent, single occupancy
-    transitionRateMatrix[0, 1] = rate_on*3 # molecules /site/sec, depends on soln conc.
-    transitionRateMatrix[0, 2] = rate_on*3
-    transitionRateMatrix[0, 3] = rate_on*3
+    transitionRateMatrix[0, 1] = rate_on # molecules /site/sec, depends on soln conc.
+    transitionRateMatrix[0, 2] = rate_on
+    transitionRateMatrix[0, 3] = rate_on
     # go from monovalent, single occupancy state to empty state
     transitionRateMatrix[1, 0] = rate_off # molecules /site/sec, binding mechnx dependnt
     transitionRateMatrix[2, 0] = rate_off
     transitionRateMatrix[3, 0] = rate_off
     # go from monovalent, single occupancy to monovalent, double occupancy state
-    transitionRateMatrix[1, 4] = rate_on*2 # similar to all monovalent trans
-    transitionRateMatrix[1, 6] = rate_on*2
-    transitionRateMatrix[2, 4] = rate_on*2
-    transitionRateMatrix[2, 5] = rate_on*2
-    transitionRateMatrix[3, 5] = rate_on*2
-    transitionRateMatrix[3, 6] = rate_on*2
+    transitionRateMatrix[1, 4] = rate_on # similar to all monovalent trans
+    transitionRateMatrix[1, 6] = rate_on
+    transitionRateMatrix[2, 4] = rate_on
+    transitionRateMatrix[2, 5] = rate_on
+    transitionRateMatrix[3, 5] = rate_on
+    transitionRateMatrix[3, 6] = rate_on
     # reverse of above block
     transitionRateMatrix[4, 1] = rate_off 
     transitionRateMatrix[6, 1] = rate_off
@@ -157,29 +144,41 @@ def find_nearest(array,value):
     return array[idx]
     
 # initialize in unbound state
-timeSteps = 1000
-stepSize = .001
-timeline = np.arange(0,timeSteps*stepSize,stepSize)
-occupancyRecord = np.zeros((timeSteps))
+timejumps = 100
+stepSize = .1
+detectionTimeSteps = 1000
+timeline = np.arange(0,detectionTimeSteps*stepSize,stepSize)
+
+occupancyRecord = np.zeros((detectionTimeSteps))
 totalSites = 1000
 
 for site in range(0,totalSites):
     print site
     currentState = 0
-    
-    clocks = np.zeros((len(transitionRateMatrix)))           
-    mainClock = 0
-    iterations = 500
-    walkRecord = np.zeros((2*iterations-1,3))
-    
+
     # random walk
-    transitionRateMatrix = transitionRates(2,1,2,1)
+    transitionRateMatrix = transitionRates(1,.1,1,.1)
     exitRateArray = exitRates(transitionRateMatrix)
     embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
     cumEmbeddedDTMC = cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC)
-    for step in range(1,iterations):
+    clocks = np.zeros((len(transitionRateMatrix)))
+    mainClock = 0
+    walkRecord = np.zeros((timejumps-1,3))
+    for step in range(1,timejumps/2):
         randomP_exit = random.uniform(0,1)
         holdingTime = np.log(1/(1-randomP_exit))/exitRateArray[currentState]
+        if holdingTime > detectionTimeSteps*stepSize:
+            for rest in range(step,timejumps/2):
+                walkRecord[rest][0] = currentState
+                walkRecord[rest][1] = holdingTime
+                clocks[currentState] = clocks[currentState] + holdingTime
+                mainClock = mainClock + holdingTime
+                walkRecord[rest][2] = mainClock
+#                print holdingTime
+#             currentState = i
+            break
+        else:
+            pass
         randomP_partition = random.uniform(0,1)
         for i in range(0, len(cumEmbeddedDTMC[:,0])):
             if randomP_partition < cumEmbeddedDTMC[i,currentState] and cumEmbeddedDTMC[i,currentState] != 0:
@@ -194,13 +193,23 @@ for site in range(0,totalSites):
             else:
                 pass
     # random walk 2 
-    transitionRateMatrix = transitionRates(0,1,2,1)
+    transitionRateMatrix = transitionRates(0,.1,1,.1)
     exitRateArray = exitRates(transitionRateMatrix)
     embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
     cumEmbeddedDTMC = cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC)
-    for step in range(iterations+1,2*iterations):
+    for step in range(timejumps/2,timejumps-1):
         randomP_exit = random.uniform(0,1)
         holdingTime = np.log(1/(1-randomP_exit))/exitRateArray[currentState]
+        if holdingTime > detectionTimeSteps*stepSize:
+            for rest in range(step,timejumps-1):
+                walkRecord[rest][0] = currentState
+                walkRecord[rest][1] = holdingTime
+                clocks[currentState] = clocks[currentState] + holdingTime
+                mainClock = mainClock + holdingTime
+                walkRecord[rest][2] = mainClock
+    #                print holdingTime
+    #             currentState = i
+            break
         randomP_partition = random.uniform(0,1)
         for i in range(0, len(cumEmbeddedDTMC[:,0])):
             if randomP_partition < cumEmbeddedDTMC[i,currentState] and cumEmbeddedDTMC[i,currentState] != 0:
@@ -220,10 +229,10 @@ for site in range(0,totalSites):
         
     timeNow = 0
     currentOccupancy = 0
-    for step in range(1, timeSteps):
+    for step in range(1, detectionTimeSteps):
         timeNow = step*stepSize
-        currentWalkerTime = find_nearest(walkRecord[:,2], timeNow)
-        currentState = walkRecord[:,0][(get_index(walkRecord[:,2],currentWalkerTime))]
+        currentWalkerTime = np.argmin((walkRecord[:,2])<timeNow)
+        currentState = walkRecord[:,0][np.argmin((walkRecord[:,2])<timeNow)]
         if currentState == 0:
             currentOccupancy = 0
         elif currentState == 1 or currentState == 2 or currentState == 3 or currentState == 8 or currentState == 9 or currentState == 10:
@@ -242,15 +251,12 @@ for site in range(0,totalSites):
 
 plt.figure()
 plt.plot(timeline,occupancyRecord)
+
+plt.figure()
+partitionSpace = plt.bar(range(len(transitionRateMatrix)-1),clocks[1:14],
+                alpha=0.4,
+                color='black')
 plt.show()
-
-
-
-#plt.figure()
-#partitionSpace = plt.bar(range(len(transitionRateMatrix)),clocks,
-#                 alpha=0.4,
-#                 color='black')
-#plt.show()
             
 ## divide up a range from 0 to 1 according to transition probabilities so that a random number will fall into a category
 #partitionedSpaceMatrix = transitionProbabilityMatrix

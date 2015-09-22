@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import random
 import csv
 import numpy as np
-import pygraphviz as pvg
+# import pygraphviz as pvg
 
 #G=pvg.AGraph(strict=False,directed=True)
 #nodelist=[
