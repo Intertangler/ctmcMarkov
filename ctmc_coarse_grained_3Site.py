@@ -7,22 +7,22 @@ stateLabels = np.arange(14)
 def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     transitionRateMatrix = np.zeros((len(stateLabels),len(stateLabels)))
     # go from empty state to monovalent, single occupancy
-    transitionRateMatrix[0, 1] = rate_on # molecules /site/sec, depends on soln conc.
+    transitionRateMatrix[0, 1] = rate_on*3 # molecules /site/sec, depends on soln conc.
     transitionRateMatrix[0, 2] = 0
     transitionRateMatrix[0, 3] = 0
     # go from monovalent, single occupancy state to empty state
-    transitionRateMatrix[1, 0] = rate_off # molecules /site/sec, binding mechnx dependnt
+    transitionRateMatrix[1, 0] = rate_off*3 # molecules /site/sec, binding mechnx dependnt
     transitionRateMatrix[2, 0] = 0
     transitionRateMatrix[3, 0] = 0
     # go from monovalent, single occupancy to monovalent, double occupancy state
-    transitionRateMatrix[1, 4] = 0 # similar to all monovalent trans
+    transitionRateMatrix[1, 4] = rate_on*6 # similar to all monovalent trans
     transitionRateMatrix[1, 6] = 0
     transitionRateMatrix[2, 4] = 0
     transitionRateMatrix[2, 5] = 0
     transitionRateMatrix[3, 5] = 0
     transitionRateMatrix[3, 6] = 0
     # reverse of above block
-    transitionRateMatrix[4, 1] = 0
+    transitionRateMatrix[4, 1] = rate_off*6
     transitionRateMatrix[6, 1] = 0
     transitionRateMatrix[4, 2] = 0
     transitionRateMatrix[5, 2] = 0
@@ -30,14 +30,14 @@ def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     transitionRateMatrix[6, 3] = 0
     
     # go from monovalent, single occupancy to bivalent 
-    transitionRateMatrix[1, 8] = 0 # interested in solving for this internal trans
+    transitionRateMatrix[1, 8] = rate_mono_to_double*6 # interested in solving for this internal trans
     transitionRateMatrix[1, 10] = 0
     transitionRateMatrix[2, 8] = 0
     transitionRateMatrix[2, 9] = 0
     transitionRateMatrix[3, 9] = 0
     transitionRateMatrix[3, 10] = 0
     # reverse of above block
-    transitionRateMatrix[8, 1] = 0
+    transitionRateMatrix[8, 1] = rate_double_to_mono*6
     transitionRateMatrix[10, 1] = 0
     transitionRateMatrix[8, 2] = 0
     transitionRateMatrix[9, 2] = 0
@@ -45,11 +45,11 @@ def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     transitionRateMatrix[10, 3] = 0
     
     # go from monovalent, double occupancy to monovalent triple occupancy
-    transitionRateMatrix[4, 7] = 0 # molecules /site/sec, depends on soln conc.
+    transitionRateMatrix[4, 7] = rate_on*3 # molecules /site/sec, depends on soln conc.
     transitionRateMatrix[5, 7] = 0
     transitionRateMatrix[6, 7] = 0
     # reverse of above block
-    transitionRateMatrix[7, 4] = 0 # molecules /site/sec, binding mechnx dependnt
+    transitionRateMatrix[7, 4] = rate_off*3 # molecules /site/sec, binding mechnx dependnt
     transitionRateMatrix[7, 5] = 0
     transitionRateMatrix[7, 6] = 0
     
@@ -69,13 +69,16 @@ def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     transitionRateMatrix[11, 6] = 0
     
     # go from bivalent to bivalent/monovalent
-    transitionRateMatrix[8, 11] = 0 # molecules /site/sec, depends on soln conc.
+    transitionRateMatrix[8, 11] = rate_on*3 # molecules /site/sec, depends on soln conc.
     transitionRateMatrix[9, 12] = 0
     transitionRateMatrix[10, 13] = 0
     # reverse of above block
-    transitionRateMatrix[11, 8] = 0 # molecules /site/sec, binding mechnx dependnt
+    transitionRateMatrix[11, 8] = rate_off*3 # molecules /site/sec, binding mechnx dependnt
     transitionRateMatrix[12, 9] = 0
     transitionRateMatrix[13, 10] = 0
+
+    transitionRateMatrix[4, 11] = rate_mono_to_double*6
+    transitionRateMatrix[11, 4] = rate_double_to_mono*6
     return transitionRateMatrix
 
 def exitRates(transitionRateMatrix):
