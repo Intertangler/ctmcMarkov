@@ -109,130 +109,114 @@ def cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC):
 
 
 
-numberOfSites = 500
+
+numberOfSites = 300
 timeSamples = 500
-timestep_size = .5
-samplingInterval = timeSamples*timestep_size
+timestep = 10
+samplingInterval = timeSamples*timestep
 
 
-for run in range(0,5):
-    k_on = 0.01*10**run/2
-    k_off = .1
-    k_mono_bi = .2
-    k_bi_mono = .01
+
+# construct timeline of events up to the latest sampling time point and note the final state at that point
+# for site in range(0,numberOfSites-1):
+
+for run in range(0,1):
+    k_on = 1
     occupancyRecord = np.zeros((timeSamples))
     for site in range(0, numberOfSites):
         cumulative_walking_time = 0
         step = 0
-        # print site
+        print site
         currentState = 0
-        transitionRateMatrix = transitionRates(k_on,k_off,k_mono_bi,k_bi_mono)
+        transitionRateMatrix = transitionRates(.1,.1,.1,.1)
         exitRateArray = exitRates(transitionRateMatrix)
         embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
         cumEmbeddedDTMC = cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC)
         walkRecord = np.zeros((5000,3))
-        timepoint = samplingInterval/4
-        while cumulative_walking_time < timepoint:
+        while cumulative_walking_time < samplingInterval/4:
             randomP_exit = random.uniform(0,1)
             if exitRateArray[currentState] == 0:
-                walkRecord[step][0] = currentState
-                holdingTime = timepoint-cumulative_walking_time
-                walkRecord[step][1] = holdingTime
-                cumulative_walking_time = timepoint
-                walkRecord[step][2] = cumulative_walking_time
-                step += 1
+#                holdingTime = samplingInterval/4-cumulative_walking_time
+##                walkRecord[step][0] = currentState
+#                walkRecord[step][1] = holdingTime
+#                cumulative_walking_time += holdingTime
+#                walkRecord[step-1][2] = cumulative_walking_time
+#                currentState = currentState
+#                step += 1
                 break
             else:
                 pass
             holdingTime = np.log(1/(1-randomP_exit))/exitRateArray[currentState]
-            randomP_partition = random.uniform(0,1)
-            walkRecord[step][0] = currentState
             walkRecord[step][1] = holdingTime
-            cumulative_walking_time = cumulative_walking_time + holdingTime
-            if cumulative_walking_time > timepoint:
-                walkRecord[step][2] = timepoint
-                walkRecord[step][1] = timepoint - walkRecord[step-1][2]
-                step += 1
-                break
-            else:
-                walkRecord[step][2] = cumulative_walking_time
-            for i in range(0, len(cumEmbeddedDTMC[:,0])):
-                if randomP_partition < cumEmbeddedDTMC[i,currentState] and cumEmbeddedDTMC[i,currentState] != 0:
-                    currentState = i
+            walkRecord[step][0] = currentState
+            randomP_partition = random.uniform(0,1)
+            for nextstate in range(0, len(cumEmbeddedDTMC[:,0])):
+                if randomP_partition < cumEmbeddedDTMC[nextstate,currentState] and cumEmbeddedDTMC[nextstate,currentState] != 0:
+                    # clocks[currentState] = clocks[currentState] + holdingTime
+                    cumulative_walking_time += holdingTime
+                    walkRecord[step][2] = cumulative_walking_time
+                    currentState = nextstate
                     step += 1
                     break
                 else:
                     pass
+            
+        cumulative_walking_time = samplingInterval/4
+        
 
-
-
-
-
-        print step
-        transitionRateMatrix = transitionRates(0, k_off, k_mono_bi, k_bi_mono)
+        print 'asdf' + str(currentState)
+        transitionRateMatrix = transitionRates(0, .1, .1, .1)
         exitRateArray = exitRates(transitionRateMatrix)
         embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
         cumEmbeddedDTMC = cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC)
-        timepoint = samplingInterval
-        while cumulative_walking_time < timepoint:
+        while cumulative_walking_time < samplingInterval:
             randomP_exit = random.uniform(0,1)
             if exitRateArray[currentState] == 0:
+                holdingTime = samplingInterval
                 walkRecord[step][0] = currentState
-                holdingTime = timepoint-cumulative_walking_time
                 walkRecord[step][1] = holdingTime
-                cumulative_walking_time = timepoint
+                cumulative_walking_time += holdingTime
                 walkRecord[step][2] = cumulative_walking_time
                 step += 1
                 break
             else:
                 pass
             holdingTime = np.log(1/(1-randomP_exit))/exitRateArray[currentState]
-            randomP_partition = random.uniform(0,1)
-            walkRecord[step][0] = currentState
             walkRecord[step][1] = holdingTime
-            cumulative_walking_time = cumulative_walking_time + holdingTime
-            if cumulative_walking_time > timepoint:
-                walkRecord[step][2] = timepoint
-                walkRecord[step][1] = timepoint - walkRecord[step-1][2]
-                step += 1
-                break
-            else:
-                walkRecord[step][2] = cumulative_walking_time
-            for i in range(0, len(cumEmbeddedDTMC[:,0])):
-                if randomP_partition < cumEmbeddedDTMC[i,currentState] and cumEmbeddedDTMC[i,currentState] != 0:
-                    currentState = i
+            walkRecord[step][0] = currentState
+            randomP_partition = random.uniform(0,1)
+            for nextstate in range(0, len(cumEmbeddedDTMC[:,0])):
+                if randomP_partition < cumEmbeddedDTMC[nextstate,currentState] and cumEmbeddedDTMC[nextstate,currentState] != 0:
+                    # clocks[currentState] = clocks[currentState] + holdingTime
+                    cumulative_walking_time += holdingTime
+                    walkRecord[step][2] = cumulative_walking_time
+                    currentState = nextstate
                     step += 1
                     break
                 else:
                     pass
-
-
 
         # rec all the occupancy events for this particular site now that the records have been built in the last two loops
         timeNow = 0
         currentOccupancy = 0
-        for t_step in range(1, timeSamples):
-            timeNow = t_step*timestep_size
-            lookupstate = walkRecord[:,0][np.argmin((walkRecord[:,2]) < timeNow)]
-            if lookupstate == 0:
-                currentOccupancy = 0
+        for tick in range(1, timeSamples):
+            timeNow = tick*timestep
+#            currentWalkerTime = np.argmin((walkRecord[:,2])>timeNow)
+            lookupstate = walkRecord[:,0][np.argmin((walkRecord[:,2])<timeNow)]
+            if lookupstate == 4 or lookupstate == 5 or lookupstate == 6 or lookupstate == 11 or lookupstate == 12 or lookupstate == 13:
+                currentOccupancy = 2
             elif lookupstate == 1 or lookupstate == 2 or lookupstate == 3 or lookupstate == 8 or lookupstate == 9 or lookupstate == 10:
                 currentOccupancy = 1
             elif lookupstate == 7:
                 currentOccupancy = 3
             else:
-                currentOccupancy = 2
-            occupancyRecord[t_step] = occupancyRecord[t_step] + currentOccupancy
+                lookupstate = 0
+            occupancyRecord[tick] = occupancyRecord[tick] + currentOccupancy/float(numberOfSites)
     #        print occupancyRecord[step]
 
-    norm_occupancyRecord = occupancyRecord/numberOfSites
-    timeRange = np.arange(0,samplingInterval,timestep_size)
-    plt.plot(timeRange,norm_occupancyRecord,lw=2,label="$k_{on} \, =$ " + str(k_on) + ' $v \, mol^{-1}  t^{-1}$, ' + "$k_{off} \, =$ " + str(k_off) + ' $  t^{-1}$, ' + "$k_{mono2bi} \, =$ " + str(k_mono_bi) + ' $  t^{-1}$, ' + "$k_{bi2mono} \, =$ " + str(k_bi_mono) + ' $  t^{-1}$, ') # vol~{-1} \, mol^{-1}
-    plt.legend()
-    plt.rcParams.update({'font.size': 20})
-    plt.xlabel("time")
-    plt.ylabel("Mean Occupancy per Site")
-    plt.ylim((0,3))
-plt.show("k_on_.01_to_100"+".png")
+#    norm_occupancyRecord = occupancyRecord/numberOfSites
+    timeRange = np.arange(0,samplingInterval,timestep)
+    plt.plot(timeRange,occupancyRecord)
+plt.savefig("k_on_.01_to_100"+".png")
 plt.close()
 

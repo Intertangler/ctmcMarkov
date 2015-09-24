@@ -31,18 +31,18 @@ def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     
     # go from monovalent, single occupancy to bivalent 
     transitionRateMatrix[1, 8] = rate_mono_to_double # interested in solving for this internal trans
-    transitionRateMatrix[1, 10] = rate_mono_to_double
+    transitionRateMatrix[1, 10] = 0
     transitionRateMatrix[2, 8] = rate_mono_to_double
-    transitionRateMatrix[2, 9] = rate_mono_to_double
-    transitionRateMatrix[3, 9] = rate_mono_to_double
-    transitionRateMatrix[3, 10] = rate_mono_to_double
+    transitionRateMatrix[2, 9] = 0
+    transitionRateMatrix[3, 9] = 0
+    transitionRateMatrix[3, 10] = 0
     # reverse of above block
     transitionRateMatrix[8, 1] = rate_double_to_mono 
-    transitionRateMatrix[10, 1] = rate_double_to_mono
+    transitionRateMatrix[10, 1] = 0
     transitionRateMatrix[8, 2] = rate_double_to_mono
-    transitionRateMatrix[9, 2] = rate_double_to_mono
-    transitionRateMatrix[9, 3] = rate_double_to_mono
-    transitionRateMatrix[10, 3] = rate_double_to_mono
+    transitionRateMatrix[9, 2] = 0
+    transitionRateMatrix[9, 3] = 0
+    transitionRateMatrix[10, 3] = 0
     
     # go from monovalent, double occupancy to monovalent triple occupancy
     transitionRateMatrix[4, 7] = rate_on # molecules /site/sec, depends on soln conc.
@@ -54,28 +54,28 @@ def transitionRates(rate_on,rate_off,rate_mono_to_double,rate_double_to_mono):
     transitionRateMatrix[7, 6] = rate_off
     
     # go from monovalent, double occupancy to bivalent/monovalent
-    transitionRateMatrix[4, 12] = rate_mono_to_double 
-    transitionRateMatrix[4, 13] = rate_mono_to_double
+    transitionRateMatrix[4, 12] = 0
+    transitionRateMatrix[4, 13] = 0
     transitionRateMatrix[5, 11] = rate_mono_to_double
-    transitionRateMatrix[5, 13] = rate_mono_to_double
-    transitionRateMatrix[6, 12] = rate_mono_to_double
+    transitionRateMatrix[5, 13] = 0
+    transitionRateMatrix[6, 12] = 0
     transitionRateMatrix[6, 11] = rate_mono_to_double
     # reverse of above block
-    transitionRateMatrix[12, 4] = rate_double_to_mono 
-    transitionRateMatrix[13, 4] = rate_double_to_mono
+    transitionRateMatrix[12, 4] = 0
+    transitionRateMatrix[13, 4] = 0
     transitionRateMatrix[11, 5] = rate_double_to_mono
-    transitionRateMatrix[13, 5] = rate_double_to_mono
-    transitionRateMatrix[12, 6] = rate_double_to_mono
+    transitionRateMatrix[13, 5] = 0
+    transitionRateMatrix[12, 6] = 0
     transitionRateMatrix[11, 6] = rate_double_to_mono
     
     # go from bivalent to bivalent/monovalent
     transitionRateMatrix[8, 11] = rate_on # molecules /site/sec, depends on soln conc.
-    transitionRateMatrix[9, 12] = rate_on
-    transitionRateMatrix[10, 13] = rate_on
+    transitionRateMatrix[9, 12] = 0
+    transitionRateMatrix[10, 13] = 0
     # reverse of above block
     transitionRateMatrix[11, 8] = rate_off # molecules /site/sec, binding mechnx dependnt
-    transitionRateMatrix[12, 9] = rate_off
-    transitionRateMatrix[13, 10] = rate_off
+    transitionRateMatrix[12, 9] = 0
+    transitionRateMatrix[13, 10] = 0
     return transitionRateMatrix
 
 def exitRates(transitionRateMatrix):
@@ -109,14 +109,15 @@ def cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC):
 
 
 
-numberOfSites = 500
+numberOfSites = 1000
 timeSamples = 500
 timestep_size = .5
 samplingInterval = timeSamples*timestep_size
+timepoint1 = samplingInterval/4
 
 
-for run in range(0,5):
-    k_on = 0.01*10**run/2
+for run in range(0,10):
+    k_on = 0.0001*10**run/2
     k_off = .1
     k_mono_bi = .2
     k_bi_mono = .01
@@ -124,7 +125,7 @@ for run in range(0,5):
     for site in range(0, numberOfSites):
         cumulative_walking_time = 0
         step = 0
-        # print site
+        print site
         currentState = 0
         transitionRateMatrix = transitionRates(k_on,k_off,k_mono_bi,k_bi_mono)
         exitRateArray = exitRates(transitionRateMatrix)
@@ -168,7 +169,7 @@ for run in range(0,5):
 
 
 
-        print step
+
         transitionRateMatrix = transitionRates(0, k_off, k_mono_bi, k_bi_mono)
         exitRateArray = exitRates(transitionRateMatrix)
         embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
@@ -227,9 +228,9 @@ for run in range(0,5):
 
     norm_occupancyRecord = occupancyRecord/numberOfSites
     timeRange = np.arange(0,samplingInterval,timestep_size)
-    plt.plot(timeRange,norm_occupancyRecord,lw=2,label="$k_{on} \, =$ " + str(k_on) + ' $v \, mol^{-1}  t^{-1}$, ' + "$k_{off} \, =$ " + str(k_off) + ' $  t^{-1}$, ' + "$k_{mono2bi} \, =$ " + str(k_mono_bi) + ' $  t^{-1}$, ' + "$k_{bi2mono} \, =$ " + str(k_bi_mono) + ' $  t^{-1}$, ') # vol~{-1} \, mol^{-1}
+    plt.plot(timeRange,norm_occupancyRecord,lw=2,label="$k_{on} \, =$ " + str(k_on) + '$v \, mol^{-1}  t^{-1}$' + "$k_{off} \, =$ " + str(k_off) + ' $  t^{-1}$, ' + "$k_{mono2bi} \, =$ " + str(k_mono_bi) + ' $  t^{-1}$, ' + "$k_{bi2mono} \, =$ " + str(k_bi_mono) + ' $  t^{-1}$, ') # vol~{-1} \, mol^{-1}
     plt.legend()
-    plt.rcParams.update({'font.size': 20})
+    plt.rcParams.update({'font.size': 22})
     plt.xlabel("time")
     plt.ylabel("Mean Occupancy per Site")
     plt.ylim((0,3))
