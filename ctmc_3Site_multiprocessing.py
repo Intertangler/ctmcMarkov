@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import random
 import numpy as np
+import multiprocessing
 
 
 stateLabels = np.arange(14)
@@ -84,7 +85,7 @@ def exitRates(transitionRateMatrix):
         exitRateArray[i] = np.sum(transitionRateMatrix[i,:])
     return exitRateArray
     
-def embeddedDTMCfn(transitionRateMatrix):
+def embeddedDTMCfn(transitionRateMatrix,exitRateArray):
     embeddedDTMC = np.zeros((len(transitionRateMatrix),len(transitionRateMatrix)))
     for i in range(0,len(embeddedDTMC[0,:])):
         for j in range(0,len(embeddedDTMC[:,0])):
@@ -107,29 +108,17 @@ def cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC):
                 cumEmbeddedDTMC[j,i]=0
     return cumEmbeddedDTMC
 
-
-
-numberOfSites = 400
-timeSamples = 500
-timestep_size = .5
-samplingInterval = timeSamples*timestep_size
-
-
-for run in range(0,1):
-    k_on = 0.01*10**run/10
-    k_off = .5
-    k_mono_bi = .5
-    k_bi_mono = .05
+def random_walks(numberOfSites,number_of_cores,timeSamples):
     occupancyRecord = np.zeros((timeSamples))
-    partition = np.zeros((len(stateLabels)))
-    for site in range(0, numberOfSites):
+    for site in range(0, numberOfSites/number_of_cores):
         cumulative_walking_time = 0
         step = 0
         # print site
         currentState = 0
+        ##################### BEGIN ON PHASE ##########################################################################
         transitionRateMatrix = transitionRates(k_on,k_off,k_mono_bi,k_bi_mono)
         exitRateArray = exitRates(transitionRateMatrix)
-        embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
+        embeddedDTMC = embeddedDTMCfn(transitionRateMatrix,exitRateArray)
         cumEmbeddedDTMC = cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC)
         walkRecord = np.zeros((5000,3))
         timepoint = samplingInterval
@@ -166,15 +155,11 @@ for run in range(0,1):
                     break
                 else:
                     pass
-
-
-
-
-
+        ##################### BEGIN OFF PHASE #########################################################################
         # print step
         transitionRateMatrix = transitionRates(0, k_off, k_mono_bi, k_bi_mono)
         exitRateArray = exitRates(transitionRateMatrix)
-        embeddedDTMC = embeddedDTMCfn(transitionRateMatrix)
+        embeddedDTMC = embeddedDTMCfn(transitionRateMatrix,exitRateArray)
         cumEmbeddedDTMC = cumEmbeddedDTMCfn(transitionRateMatrix,embeddedDTMC)
         timepoint = samplingInterval
         while cumulative_walking_time < timepoint:
@@ -210,9 +195,6 @@ for run in range(0,1):
                     break
                 else:
                     pass
-
-
-
         # rec all the occupancy events for this particular site now that the records have been built in the last two loops
         timeNow = 0
         currentOccupancy = 0
@@ -229,21 +211,51 @@ for run in range(0,1):
                 currentOccupancy = 2
             occupancyRecord[t_step] = occupancyRecord[t_step] + currentOccupancy
     #        print occupancyRecord[step]
+    return occupancyRecord
 
-    norm_occupancyRecord = occupancyRecord/numberOfSites
+
+
+
+
+numberOfSites = 400 #Make it a multiple of 4!
+timeSamples = 500
+timestep_size = .5
+samplingInterval = timeSamples*timestep_size
+number_of_cores = 4
+
+for run in range(0,8):
+    k_on = 0.01*10**run/10
+    k_off = .5
+    k_mono_bi = .5
+    k_bi_mono = .05
+    multiprocessed_occupancy_record = np.zeros((timeSamples))
+    partition = np.zeros((len(stateLabels)))
+########## MULTIPROCESSED PART ############## MULTIPROCESSED PART ############# MULTIPROCESSED PART ###################
+    if __name__ == '__main__':
+        jobs = []
+        for i in range(4):
+            p = multiprocessing.Process(target=random_walks, args=(numberOfSites, number_of_cores, timeSamples))
+            jobs.append(p)
+            p.start()
+            multiprocessed_occupancy_record = multiprocessed_occupancy_record + random_walks(numberOfSites, number_of_cores, timeSamples)
+            # print multiprocessed_occupancy_record
+
+    norm_occupancyRecord = multiprocessed_occupancy_record/numberOfSites
     timeRange = np.arange(0,samplingInterval,timestep_size)
+    plt.figure(run)
+    plt.subplot(211)
+    plt.plot(timeRange,norm_occupancyRecord,lw=2,label="$k_{on} \, =$ " + str(k_on) + ' $v \, mol^{-1}  t^{-1}$, ' + "$k_{off} \, =$ " + str(k_off) + ' $  t^{-1}$, ' + "$k_{mono2bi} \, =$ " + str(k_mono_bi) + ' $  t^{-1}$, ' + "$k_{bi2mono} \, =$ " + str(k_bi_mono) + ' $  t^{-1}$, ') # vol~{-1} \, mol^{-1}
+    plt.legend()
+    plt.rcParams.update({'font.size': 8})
+    plt.xlabel("time")
+    plt.ylabel("Mean Occupancy per Site")
+    plt.ylim((0,3))
     # plt.figure()
-    # plt.plot(timeRange,norm_occupancyRecord,lw=2,label="$k_{on} \, =$ " + str(k_on) + ' $v \, mol^{-1}  t^{-1}$, ' + "$k_{off} \, =$ " + str(k_off) + ' $  t^{-1}$, ' + "$k_{mono2bi} \, =$ " + str(k_mono_bi) + ' $  t^{-1}$, ' + "$k_{bi2mono} \, =$ " + str(k_bi_mono) + ' $  t^{-1}$, ') # vol~{-1} \, mol^{-1}
-    # plt.legend()
-    # plt.rcParams.update({'font.size': 20})
-    # plt.xlabel("time")
-    # plt.ylabel("Mean Occupancy per Site")
-    # plt.ylim((0,3))
-    plt.figure()
-    partitionSpace = plt.bar(range(len(transitionRateMatrix)),partition[0:14],
+    plt.subplot(212)
+    partitionSpace = plt.bar(range(len(stateLabels)),partition[0:14],
                 alpha=0.4,
                 color='black')
-
+#
 # plt.show("k_on_.01_to_100"+".png")
 # plt.close()
 
